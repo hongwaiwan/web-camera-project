@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera Preview</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    video {
+      width: 100%;
+      max-width: 500px;
+      border-radius: 8px;
+      background-color: black;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Camera Preview</h2>
+  <video id="camera" autoplay playsinline></video>
+  <br>
+  <button onclick="startCamera()">Start Camera</button>
+
+  <script>
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" } // back camera
+        });
+        document.getElementById("camera").srcObject = stream;
+      } catch (err) {
+        alert("Camera error: " + err.message);
+        console.error(err);
+      }
+    }
+  </script>
+
+</body>
+</html>
+
+<!--
+To run this code, save it as index.html and open it in a web server environment (e.g., Live Server in VSCode) to allow camera access.
+To start the live server in VSCode, right-click on the index.html file and select "Open with Live Server".
+You can use the following URL if using Live Server:
+http://127.0.0.1:5500/index.html
+
+To install ngrok for exposing local servers, visit: https://ngrok.com/download
+Save the file to C:\ngrok\ngrok.exe for easy access from the command line.
+Open VSCode terminal and run:
+C:\ngrok\ngrok.exe http 5500
+But this to sign up for an ngrok account and get an auth token first.
+
+Deploy to github instructions:
+1. Create a new repository on GitHub.
+2. Initialize a local git repository in your project folder:
+   git init
+3. Add your files to the repository:
+    git add .
+4. Commit your changes:
+    git commit -m "Initial commit"
+5. Link your local repository to the GitHub repository:
+    git remote add origin 
+
+-->
