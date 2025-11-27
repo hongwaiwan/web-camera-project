@@ -3,26 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera Preview</title>
+  <title>Camera App</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
+      font-family: Arial, sans-serif;
       text-align: center;
-      background-color: #f0f0f0;
+      background: #f0f0f0;
     }
-    h2 {
-      margin-bottom: 20px;
-    }
-    video {
-      width: 100%;
-      max-width: 500px;
-      border-radius: 8px;
-      background-color: black;
+    #camera, #photo {
+      width: 100vw;
+      height: auto;
+      background: black;
     }
     button {
-      margin-top: 20px;
+      margin: 5px;
       padding: 10px 20px;
       font-size: 16px;
       border: none;
@@ -31,53 +26,241 @@
       color: white;
       cursor: pointer;
     }
+    .btn-red { background: #dc3545; }
+    .btn-green { background: #28a745; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-  <h2>Camera Preview</h2>
-  <video id="camera" autoplay playsinline></video>
-  <br>
-  <button onclick="startCamera()">Start Camera</button>
+  <h2 id="title">Camera App</h2>
+
+  <video id="camera" autoplay playsinline class="hidden"></video>
+  <img id="photo" class="hidden">
+
+  <div id="buttons">
+    <button id="startBtn" onclick="startCamera()">Start Camera</button>
+  </div>
 
   <script>
+    let stream = null;
+    let originalPhoto = null;
+
+    // ------------------------ Start Camera ------------------------
     async function startCamera() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" } // back camera
-        });
-        document.getElementById("camera").srcObject = stream;
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        const video = document.getElementById("camera");
+        video.srcObject = stream;
+        video.classList.remove("hidden");
+        document.getElementById("photo").classList.add("hidden");
+        document.getElementById("title").textContent = "Camera Preview";
+
+        document.getElementById("buttons").innerHTML = `
+          <button onclick="takePhoto()" class="btn-green">Take Photo</button>
+          <button onclick="stopCamera()" class="btn-red">Stop Camera</button>
+        `;
       } catch (err) {
         alert("Camera error: " + err.message);
-        console.error(err);
       }
     }
+
+    // ------------------------ Stop Camera ------------------------
+    function stopCamera() {
+      if(stream) stream.getTracks().forEach(t => t.stop());
+      document.getElementById("camera").classList.add("hidden");
+      document.getElementById("photo").classList.add("hidden");
+      document.getElementById("title").textContent = "Camera App";
+      document.getElementById("buttons").innerHTML = `
+        <button onclick="startCamera()">Start Camera</button>
+      `;
+    }
+
+    // ------------------------ Take Photo ------------------------
+    function takePhoto() {
+      const video = document.getElementById("camera");
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0);
+
+      const photo = document.getElementById("photo");
+      photo.src = canvas.toDataURL("image/png");
+      originalPhoto = photo.src;
+
+      video.classList.add("hidden");
+      photo.classList.remove("hidden");
+
+      if(stream) stream.getTracks().forEach(t => t.stop());
+
+      document.getElementById("title").textContent = "Photo Taken";
+
+      document.getElementById("buttons").innerHTML = `
+        <button onclick="undoPhoto()">Undo</button>
+        <button onclick="grayPhoto()">Gray</button>
+        <button onclick="blurPhoto()">Blur</button>
+        <button onclick="detectShapes()">Detect</button>
+        <button onclick="done()" class="btn-red">Done</button>
+      `;
+    }
+
+    // ------------------------ Undo ------------------------
+    function undoPhoto() {
+      document.getElementById("photo").src = originalPhoto;
+    }
+
+    // ------------------------ Gray ------------------------
+    function grayPhoto() {
+      applyFilter((r,g,b,a)=> {
+        let gray = (r+g+b)/3;
+        return [gray, gray, gray, a];
+      });
+    }
+
+    // ------------------------ Blur ------------------------
+    function blurPhoto() {
+      const img = document.getElementById("photo");
+      const image = new Image();
+      image.src = img.src;
+      image.onload = function() {
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(image,0,0);
+
+        let imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+        let output = ctx.createImageData(canvas.width,canvas.height);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const kernel = [
+          [1,4,6,4,1],
+          [4,16,24,16,4],
+          [6,24,36,24,6],
+          [4,16,24,16,4],
+          [1,4,6,4,1]
+        ];
+        const ksum = 256;
+
+        function pixel(x,y) {
+          let i=(y*w+x)*4;
+          return [imgData.data[i], imgData.data[i+1], imgData.data[i+2], imgData.data[i+3]];
+        }
+
+        for(let y=2; y<h-2; y++){
+          for(let x=2; x<w-2; x++){
+            let r=0,g=0,b=0;
+            for(let ky=-2;ky<=2;ky++){
+              for(let kx=-2;kx<=2;kx++){
+                let weight=kernel[ky+2][kx+2];
+                let [pr,pg,pb]=pixel(x+kx,y+ky);
+                r+=pr*weight; g+=pg*weight; b+=pb*weight;
+              }
+            }
+            let i=(y*w+x)*4;
+            output.data[i]=r/ksum;
+            output.data[i+1]=g/ksum;
+            output.data[i+2]=b/ksum;
+            output.data[i+3]=255;
+          }
+        }
+        ctx.putImageData(output,0,0);
+        img.src = canvas.toDataURL("image/png");
+      }
+    }
+
+    // ------------------------ Apply Filter ------------------------
+    function applyFilter(filterFunc){
+      const img=document.getElementById("photo");
+      const image=new Image();
+      image.src=img.src;
+      image.onload=function(){
+        const canvas=document.createElement("canvas");
+        canvas.width=image.width;
+        canvas.height=image.height;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(image,0,0);
+
+        let imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        let data=imgData.data;
+        for(let i=0;i<data.length;i+=4){
+          let [r,g,b,a]=filterFunc(data[i],data[i+1],data[i+2],data[i+3]);
+          data[i]=r; data[i+1]=g; data[i+2]=b; data[i+3]=a;
+        }
+        ctx.putImageData(imgData,0,0);
+        img.src=canvas.toDataURL("image/png");
+      }
+    }
+
+    // ------------------------ Detect Lines + Circles ------------------------
+    function detectShapes(){
+      const img=document.getElementById("photo");
+      const image=new Image();
+      image.src=img.src;
+      image.onload=function(){
+        const canvas=document.createElement("canvas");
+        canvas.width=image.width;
+        canvas.height=image.height;
+        const ctx=canvas.getContext("2d");
+        ctx.drawImage(image,0,0);
+
+        let imgData=ctx.getImageData(0,0,canvas.width,canvas.height);
+        let gray=new Uint8ClampedArray(imgData.data.length/4);
+        for(let i=0;i<gray.length;i++){
+          let r=imgData.data[i*4], g=imgData.data[i*4+1], b=imgData.data[i*4+2];
+          gray[i]=(r+g+b)/3;
+        }
+
+        const w=canvas.width, h=canvas.height;
+        let edges=new Uint8ClampedArray(gray.length);
+        function idx(x,y){return y*w+x;}
+
+        for(let y=1;y<h-1;y++){
+          for(let x=1;x<w-1;x++){
+            let gx=-gray[idx(x-1,y-1)]-2*gray[idx(x-1,y)]-gray[idx(x-1,y+1)]+
+                    gray[idx(x+1,y-1)]+2*gray[idx(x+1,y)]+gray[idx(x+1,y+1)];
+            let gy=-gray[idx(x-1,y-1)]-2*gray[idx(x,y-1)]-gray[idx(x+1,y-1)]+
+                    gray[idx(x-1,y+1)]+2*gray[idx(x,y+1)]+gray[idx(x+1,y+1)];
+            let g=Math.sqrt(gx*gx+gy*gy);
+            edges[idx(x,y)]=g>100?255:0;
+          }
+        }
+
+        // Draw lines
+        ctx.strokeStyle="green";
+        ctx.lineWidth=3;
+        for(let y=0;y<h;y+=10){
+          for(let x=0;x<w;x+=10){
+            if(edges[idx(x,y)]===255){
+              ctx.beginPath();
+              ctx.moveTo(x-20,y-20);
+              ctx.lineTo(x+20,y+20);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Draw circles
+        ctx.strokeStyle="red";
+        ctx.lineWidth=3;
+        for(let y=20;y<h-20;y+=20){
+          for(let x=20;x<w-20;x+=20){
+            if(edges[idx(x,y)]===255){
+              ctx.beginPath();
+              ctx.arc(x,y,20,0,Math.PI*2);
+              ctx.stroke();
+            }
+          }
+        }
+
+        img.src=canvas.toDataURL("image/png");
+      }
+    }
+
+    function done(){ stopCamera(); }
   </script>
 
 </body>
 </html>
-
-<!--
-To run this code, save it as index.html and open it in a web server environment (e.g., Live Server in VSCode) to allow camera access.
-To start the live server in VSCode, right-click on the index.html file and select "Open with Live Server".
-You can use the following URL if using Live Server:
-http://127.0.0.1:5500/index.html
-
-To install ngrok for exposing local servers, visit: https://ngrok.com/download
-Save the file to C:\ngrok\ngrok.exe for easy access from the command line.
-Open VSCode terminal and run:
-C:\ngrok\ngrok.exe http 5500
-But this to sign up for an ngrok account and get an auth token first.
-
-Deploy to github instructions:
-1. Create a new repository on GitHub.
-2. Initialize a local git repository in your project folder:
-   git init
-3. Add your files to the repository:
-    git add .
-4. Commit your changes:
-    git commit -m "Initial commit"
-5. Link your local repository to the GitHub repository:
-    git remote add origin 
-
--->
