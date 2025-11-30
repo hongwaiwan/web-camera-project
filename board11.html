@@ -14,17 +14,29 @@
 <div id="info">Move: 0</div>
 
 <div id="controls">
-  <button onclick="goToBegin()">⏮</button>
-  <button onclick="stepBackward()">◀</button>
-  <button onclick="stepForward()">▶</button>
-  <button onclick="goToEnd()">⏭</button>
-  <button onclick="undoMove()">↩</button>
-  <button onclick="cleanBoard()">🆕 New</button>
-  <button id="toggleMode" onclick="toggleMode()">📊 Score</button>
+  <!-- Row 1: 5 buttons -->
+  <div class="row">
+    <button onclick="goToBegin()">⏮</button>
+    <button onclick="stepBackward()">◀</button>
+    <button onclick="stepForward()">▶</button>
+    <button onclick="goToEnd()">⏭</button>
+    <button onclick="undoMove()">↩</button>
+  </div>
+
+  <!-- Row 2: 2 buttons -->
+  <div class="row">
+    <button onclick="cleanBoard()">🆕 New</button>
+    <button id="toggleMode" onclick="toggleMode()">📊 Score</button>
+  </div>
+
+  <!-- Row 3: 2 buttons -->
+  <div class="row">
     <button onclick="document.getElementById('sgfFile').click()">📂 Open</button>
-    <input type="file" id="sgfFile" accept=".sgf" style="display:none;">
-  <button onclick="saveSGF()">💾 Save</button>
+    <button onclick="saveSGF()">💾 Save</button>
+  </div>
 </div>
+
+<input type="file" id="sgfFile" accept=".sgf" style="display:none;">
 
 <script>
 const size = 19;
