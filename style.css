@@ -41,20 +41,31 @@ body {
 
 #controls button {
   margin: 5px;
-  padding: 10px 16px;
-  font-size: 18px;  /* default desktop */
+  padding: 10px 16px;   /* default desktop padding */
+  font-size: 18px;      /* default desktop font */
   cursor: pointer;
+  background-color: green;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+/* --- Hover effect --- */
+#controls button:hover {
+  background-color: darkgreen;
+  transform: scale(1.05);
 }
 
 /* --- Phone Portrait Mode Scaling --- */
-@media (max-width: 500px) and (orientation: portrait) {
+@media (max-width: 800px) and (orientation: portrait) {
   #controls button {
-    font-size: 36px;      /* 2x desktop font size */
-    padding: 20px 30px;   /* 2x desktop padding */
-    width: 40%;            /* make buttons larger and wrap nicely */
+    font-size: 54px;      /* 3x desktop font size */
+    padding: 30px 48px;   /* 3x desktop padding */
+    width: 45%;            /* make buttons larger and wrap nicely */
   }
 
   #info {
-    font-size: 36px;      /* 2x desktop info text */
+    font-size: 54px;      /* 3x desktop info text */
   }
 }
