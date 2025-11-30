@@ -24,9 +24,17 @@ body {
 /* --- Info Text --- */
 #info {
   text-align: center;
-  font-size: 36px;  /* double size for visibility */
   margin: 5px;
   font-weight: bold;
+}
+
+#info-line1 {
+  font-size: 36px; /* bigger for move and score */
+}
+
+#info-line2 {
+  font-size: 28px; /* smaller for filename */
+  color: #333;     /* optional: slightly different color */
 }
 
 /* --- Controls / Buttons --- */
@@ -48,7 +56,7 @@ body {
   padding: 20px;          /* Increase button height */
   font-size: 36px;        /* Bigger text */
   cursor: pointer;
-  background-color: green;  /* Button color */
+  background-color: mediumvioletred;  /* Button color */
   color: white;
   border: none;
   border-radius: 8px;
@@ -65,11 +73,11 @@ body {
 /* --- Phone Portrait Mode --- */
 @media (orientation: portrait) {
   #info {
-    font-size: 72px; /* 2x bigger than default for phone */
+    font-size: 48px; /* 2x bigger than default for phone */
   }
 
   .row button {
-    font-size: 72px;  /* 2x bigger text */
-    padding: 30px;    /* 2x taller buttons */
+    font-size: 48px;  /* 2x bigger text */
+    padding: 10px;    /* 2x taller buttons */
   }
 }

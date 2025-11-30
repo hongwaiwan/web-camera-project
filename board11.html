@@ -11,7 +11,10 @@
   <canvas id="board"></canvas>
 </div>
 
-<div id="info">Move: 0</div>
+<div id="info">
+  <span id="info-line1"></span><br>
+  <span id="info-line2"></span>
+</div>
 
 <div id="controls">
   <!-- Row 1: 5 buttons -->
@@ -88,14 +91,17 @@ function drawBoard(){
 
   canvas.dataset.spacing = spacing; canvas.dataset.padding = padding;
 
-  // Info
-    let infoText = "Move: " + currentMove;
-    if (scoringMode) {
-    const score = computeScoreChinese();
-    infoText += " | Score - Black " + score.black + " (" + (score.black - score.white) + ") : White " + score.white;
-    }
-    if (currentFileName) infoText += " | File: " + currentFileName;
-    document.getElementById("info").innerText = infoText;
+// --- Info Text: 2 lines ---
+let line1 = "Move: " + currentMove;
+if (scoringMode) {
+  const score = computeScoreChinese();
+  line1 += " | Score - Black " + score.black + " (" + (score.black - score.white) + ") : White " + score.white;
+}
+
+let line2 = currentFileName ? "File: " + currentFileName : "";
+
+document.getElementById("info-line1").innerText = line1;
+document.getElementById("info-line2").innerText = line2;
 }
 
 function drawStone(r,c,color,spacing,padding){
