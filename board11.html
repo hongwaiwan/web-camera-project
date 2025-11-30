@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Weiqi Board Canvas with SGF Save & Scoring</title>
+<title>Weiqi Board</title>
 <style>
 body { margin:0; background:#f0e4c2; display:flex; flex-direction:column; height:100vh; }
 #board-container { flex:1; display:flex; justify-content:center; align-items:center; }
 #board { background:#deb887; touch-action:none; }
-#info { text-align:center; font-size:22px; margin:5px; } /* updated font size */
+#info { text-align:center; font-size:22px; margin:5px; } /* same font for all devices */
 #controls { padding:10px; text-align:center; background:#e0d2b2; display:flex; flex-wrap:wrap; justify-content:center; }
-#controls button { margin:5px; padding:10px 16px; font-size:22px; cursor:pointer; } /* updated font size */
+#controls button { margin:5px; padding:10px 16px; font-size:22px; cursor:pointer; } /* same font for all devices */
 #sgfFile { display:none; }
 </style>
 </head>
@@ -107,7 +107,7 @@ function drawStone(r,c,color,spacing,padding){
   if(color==="W"){ctx.strokeStyle="#888"; ctx.lineWidth=1; ctx.stroke();}
 }
 
-// --- Buttons Layout for portrait/landscape ---
+// --- Responsive Buttons ---
 function adjustButtonsLayout(){
   const controls = document.getElementById("controls");
   const buttons = Array.from(controls.getElementsByTagName("button"));
@@ -115,48 +115,40 @@ function adjustButtonsLayout(){
 
   controls.style.flexWrap = "wrap";
   if(isPortrait){
-    // Portrait: 2 rows
     buttons.forEach((btn,i)=>{
-      if(i<5){ btn.style.flex = "1 1 calc(20% - 10px)"; } // first row 5 buttons
-      else{ btn.style.flex = "1 1 calc(25% - 10px)"; }   // second row remaining 5 buttons
+      if(i<5){ btn.style.flex = "1 1 calc(20% - 10px)"; } 
+      else{ btn.style.flex = "1 1 calc(25% - 10px)"; }
     });
   } else {
-    // Landscape: 1 row
     buttons.forEach(btn=>{ btn.style.flex = "1 1 calc(10% - 10px)"; });
   }
 
-  // font size same for both modes
   buttons.forEach(btn=>btn.style.fontSize="22px");
   document.getElementById("info").style.fontSize="22px";
 }
 
-// --- Rest of your existing code for moves, scoring, SGF, etc. ---
+// --- Buttons Functions ---
 function undoMove(){if(moveList.length>0){moveList.pop(); currentMove=moveList.length; applyMoves();}}
-function cleanBoard(){
-  moveList = []; currentMove = 0; grid = Array.from({length:size},()=>Array(size).fill(null));
-  koHistory.clear(); userDeadGroups.clear(); scoringMode = false; 
-  document.getElementById("toggleMode").innerText = "📊 Score"; currentFileName = ""; drawBoard();
-}
+function cleanBoard(){ moveList=[]; currentMove=0; grid=Array.from({length:size},()=>Array(size).fill(null)); koHistory.clear(); userDeadGroups.clear(); scoringMode=false; document.getElementById("toggleMode").innerText="📊 Score"; currentFileName=""; drawBoard();}
 function stepBackward(){if(currentMove>0){currentMove--; applyMoves();}}
 function stepForward(){if(currentMove<moveList.length){currentMove++; applyMoves();}}
 function goToBegin(){currentMove=0; applyMoves();}
 function goToEnd(){currentMove=moveList.length; applyMoves();}
 function toggleMode(){ scoringMode=!scoringMode; document.getElementById("toggleMode").innerText=scoringMode?"✏️ Play":"📊 Score"; if(scoringMode) autoDetectDeadGroups(); drawBoard(); }
 
-// SGF open/save
+// SGF Open/Save
 document.getElementById("sgfFile").addEventListener("change", function(e) {
   const file = e.target.files[0]; if(!file) return;
-  moveList = []; currentMove = 0; grid = Array.from({length:size},()=>Array(size).fill(null));
-  koHistory.clear(); userDeadGroups.clear(); scoringMode=false;
+  moveList=[]; currentMove=0; grid=Array.from({length:size},()=>Array(size).fill(null)); koHistory.clear(); userDeadGroups.clear(); scoringMode=false;
   document.getElementById("toggleMode").innerText="📊 Score"; currentFileName=file.name;
   const reader = new FileReader();
-  reader.onload = function(ev){ parseSGF(ev.target.result); currentMove=moveList.length; drawBoard(); }
+  reader.onload=function(ev){ parseSGF(ev.target.result); currentMove=moveList.length; drawBoard(); }
   reader.readAsText(file); e.target.value=null;
 });
 function parseSGF(sgf){ moveList=[]; currentMove=0; const regex=/;([BW])\[([a-s]{2})\]/g; let match; while(match=regex.exec(sgf)){ const color=match[1]; const [c,r]=match[2].split("").map(ch=>ch.charCodeAt(0)-97); moveList.push({row:r,col:c,color}); } currentMove=moveList.length; applyMoves(); }
 function saveSGF(){ let sgf="(;FF[4]GM[1]SZ[19]"; moveList.forEach(m=>{ const c=String.fromCharCode(97+m.col); const r=String.fromCharCode(97+m.row); sgf+=`;${m.color}[${c}${r}]`;}); sgf+=")"; const blob=new Blob([sgf],{type:"text/plain"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="game.sgf"; a.click(); URL.revokeObjectURL(url); }
 
-// Your existing applyMoves(), scoring functions, drawDeadMarkGroup(), etc. can remain unchanged
+// --- Your existing move applyMoves(), scoring functions, etc. remain unchanged ---
 
 window.addEventListener("resize",resizeBoard);
 resizeBoard();
