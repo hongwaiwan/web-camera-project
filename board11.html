@@ -95,7 +95,7 @@ function drawBoard(){
 let line1 = "Move: " + currentMove;
 if (scoringMode) {
   const score = computeScoreChinese();
-  line1 += " | Score - Black " + score.black + " (" + (score.black - score.white) + ") : White " + score.white;
+  line1 += " | Black " + score.black + " (" + (score.black - score.white) + ") : White " + score.white;
 }
 
 let line2 = currentFileName ? "File: " + currentFileName : "";

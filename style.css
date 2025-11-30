@@ -29,11 +29,11 @@ body {
 }
 
 #info-line1 {
-  font-size: 48px; /* bigger for move and score */
+  font-size: 52px; /* bigger for move and score */
 }
 
 #info-line2 {
-  font-size: 28px; /* smaller for filename */
+  font-size: 32px; /* smaller for filename */
   color: #333;     /* optional: slightly different color */
 }
 
@@ -56,7 +56,7 @@ body {
   padding: 10px;          /* Increase button height */
   font-size: 68px;        /* Bigger text */
   cursor: pointer;
-  background-color: blue;  /* Button color */
+  background-color: lightslategray;  /* Button color */
   color: white;
   border: none;
   border-radius: 8px;
