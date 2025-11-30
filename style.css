@@ -48,7 +48,7 @@ body {
   padding: 20px;          /* Increase button height */
   font-size: 36px;        /* Bigger text */
   cursor: pointer;
-  background-color: blue;  /* Button color */
+  background-color: green;  /* Button color */
   color: white;
   border: none;
   border-radius: 8px;
@@ -65,11 +65,11 @@ body {
 /* --- Phone Portrait Mode --- */
 @media (max-width: 800px) and (orientation: portrait) {
   #info {
-    font-size: 72px; /* 2x bigger than default for phone */
+    font-size: 172px; /* 2x bigger than default for phone */
   }
 
   .row button {
-    font-size: 72px;  /* 2x bigger text */
-    padding: 40px;    /* 2x taller buttons */
+    font-size: 172px;  /* 2x bigger text */
+    padding: 20px;    /* 2x taller buttons */
   }
 }
