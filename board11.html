@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Weiqi Board Canvas with SGF Save & Scoring</title>
+<style>
+body { margin:0; background:#f0e4c2; display:flex; flex-direction:column; height:100vh; }
+#board-container { flex:1; display:flex; justify-content:center; align-items:center; }
+#board { background:#deb887; touch-action:none; }
+#info { text-align:center; font-size:18px; margin:5px; }
+#controls { padding:10px; text-align:center; background:#e0d2b2; display:flex; flex-wrap:wrap; justify-content:center; }
+#controls button { margin:5px; padding:10px 16px; font-size:18px; cursor:pointer; }
+@media (max-width: 800px) {
+  #controls button { width: 22%; font-size: 22px; padding: 14px 0; }
+}
+#sgfFile { display:none; }
+</style>
+</head>
+<body>
+
+<div id="board-container">
+  <canvas id="board"></canvas>
+</div>
+
+<div id="info">Move: 0</div>
+
+<div id="controls">
+  <button onclick="goToBegin()">⏮</button>
+  <button onclick="stepBackward()">◀</button>
+  <button onclick="stepForward()">▶</button>
+  <button onclick="goToEnd()">⏭</button>
+  <button onclick="undoMove()">↩</button>
+  <button onclick="cleanBoard()">🆕 New</button>
+  <button id="toggleMode" onclick="toggleMode()">📊 Score</button>
+    <button onclick="document.getElementById('sgfFile').click()">📂 Open</button>
+    <input type="file" id="sgfFile" accept=".sgf" style="display:none;">
+  <button onclick="saveSGF()">💾 Save</button>
+</div>
+
+<script>
+const size = 19;
+let grid = Array.from({length:size},()=>Array(size).fill(null));
+let moveList = [];
+let currentMove = 0;
+let koHistory = new Set();
+let userDeadGroups = new Set(); // all dead groups (auto or manual)
+let scoringMode = false;
+let canvas = document.getElementById("board");
+let ctx = canvas.getContext("2d");
+let currentFileName = "";  // add near the top with other globals
+
+// --- Resize & Draw ---
+function resizeBoard(){ const w=Math.min(window.innerWidth, window.innerHeight*.9); canvas.width=canvas.height=w; drawBoard(); }
+
+function drawBoard(){
+  const w=canvas.width, h=canvas.height;
+  const spacing=w/(size-1+1), padding=spacing/2;
+  ctx.clearRect(0,0,w,h);
+
+  // Grid
+  ctx.strokeStyle="#000"; ctx.lineWidth=1;
+  for(let i=0;i<size;i++){
+    ctx.beginPath(); ctx.moveTo(Math.round(padding+i*spacing), Math.round(padding)); ctx.lineTo(Math.round(padding+i*spacing), Math.round(h-padding)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(Math.round(padding), Math.round(padding+i*spacing)); ctx.lineTo(Math.round(w-padding), Math.round(padding+i*spacing)); ctx.stroke();
+  }
+
+  // Star points
+  const stars=[[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]];
+  const starRadius = Math.max(3, Math.min(5, Math.floor(Math.min(canvas.width, canvas.height)/200)));
+  stars.forEach(([r,c])=>{ctx.beginPath(); ctx.arc(Math.round(padding+c*spacing),Math.round(padding+r*spacing),starRadius,0,2*Math.PI); ctx.fillStyle="#000"; ctx.fill();});
+
+  // Stones
+  for(let r=0;r<size;r++){for(let c=0;c<size;c++){if(grid[r][c]) drawStone(r,c,grid[r][c],spacing,padding);}}
+
+  // Last move ring
+  if(!scoringMode && currentMove>0){
+    const last = moveList[currentMove-1];
+    ctx.beginPath();
+    ctx.arc(padding+last.col*spacing, padding+last.row*spacing, spacing*0.45/2,0,2*Math.PI);
+    ctx.lineWidth=2; ctx.strokeStyle=last.color==="B"?"white":"black"; ctx.stroke();
+  }
+
+  // Dead stones overlay (all userDeadGroups)
+  if(scoringMode){
+    drawScoringOverlay();
+  }
+
+  canvas.dataset.spacing = spacing; canvas.dataset.padding = padding;
+
+  // Info
+    let infoText = "Move: " + currentMove;
+    if (scoringMode) {
+    const score = computeScoreChinese();
+    infoText += " | Score - Black " + score.black + " (" + (score.black - score.white) + ") : White " + score.white;
+    }
+    if (currentFileName) infoText += " | File: " + currentFileName;
+    document.getElementById("info").innerText = infoText;
+}
+
+function drawStone(r,c,color,spacing,padding){
+  const x=padding+c*spacing, y=padding+r*spacing, radius=spacing*0.45;
+  ctx.shadowColor="rgba(0,0,0,0.4)"; ctx.shadowBlur=6; ctx.shadowOffsetX=radius*0.15; ctx.shadowOffsetY=radius*0.15;
+  const grad = ctx.createRadialGradient(x-radius*0.3,y-radius*0.3,radius*0.1,x,y,radius);
+  if(color==="B"){grad.addColorStop(0,"#666"); grad.addColorStop(1,"#000");}else{grad.addColorStop(0,"#fff"); grad.addColorStop(1,"#ccc");}
+  ctx.beginPath(); ctx.arc(x,y,radius,0,2*Math.PI); ctx.fillStyle=grad; ctx.fill();
+  ctx.shadowBlur=0; ctx.shadowOffsetX=0; ctx.shadowOffsetY=0;
+  if(color==="W"){ctx.strokeStyle="#888"; ctx.lineWidth=1; ctx.stroke();}
+}
+
+function drawDeadMarkGroup(g){
+  const spacing=parseFloat(canvas.dataset.spacing);
+  const padding=parseFloat(canvas.dataset.padding);
+  g.stones.forEach(([r,c])=>{
+    const x=padding+c*spacing, y=padding+r*spacing, radius=spacing*0.35;
+    ctx.beginPath(); ctx.arc(x,y,radius,0,2*Math.PI); ctx.fillStyle=g.color==='B'?'rgba(0,0,0,0.5)':'rgba(255,255,255,0.5)'; ctx.fill();
+    ctx.strokeStyle=g.color==='B'?'white':'black'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x-radius*0.6,y-radius*0.6); ctx.lineTo(x+radius*0.6,y+radius*0.6);
+    ctx.moveTo(x+radius*0.6,y-radius*0.6); ctx.lineTo(x-radius*0.6,y+radius*0.6); ctx.stroke();
+  });
+}
+
+// --- Group & Move Logic ---
+function getGroupAndLiberties(r,c){
+  const color=grid[r][c]; let visited=new Set(), stones=[], liberties=0;
+  function dfs(x,y){ const key=x+","+y; if(visited.has(key)) return; visited.add(key); stones.push([x,y]);
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{ const nx=x+dx, ny=y+dy; if(nx<0||nx>=size||ny<0||ny>=size) return; if(grid[nx][ny]===null) liberties++; else if(grid[nx][ny]===color) dfs(nx,ny);});
+  }
+  dfs(r,c); return {stones,liberties};
+}
+
+function removeGroup(stones){stones.forEach(([r,c])=>grid[r][c]=null);}
+
+function attemptMove(row,col,color){
+  if(grid[row][col]!==null) return false;
+  grid[row][col]=color;
+  const enemy=color==="B"?"W":"B"; let captured=[];
+  [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+    const nr=row+dx, nc=col+dy; if(nr<0||nr>=size||nc<0||nc>=size) return;
+    if(grid[nr][nc]===enemy){const g=getGroupAndLiberties(nr,nc); if(g.liberties===0) captured.push(...g.stones);}
+  });
+  if(captured.length>0) removeGroup(captured);
+  const myGroup=getGroupAndLiberties(row,col);
+  if(myGroup.liberties===0){grid[row][col]=null; return false;}
+  const hash=grid.map(r=>r.map(v=>v||".").join("")).join(""); if(koHistory.has(hash)){grid[row][col]=null; return false;}
+  koHistory.add(hash); return true;
+}
+
+// --- Mouse Click ---
+canvas.addEventListener("click", function(e){
+  const rect=canvas.getBoundingClientRect();
+  const spacing=parseFloat(canvas.dataset.spacing), padding=parseFloat(canvas.dataset.padding);
+  const x=e.clientX-rect.left-padding, y=e.clientY-rect.top-padding;
+  const col=Math.round(x/spacing), row=Math.round(y/spacing);
+  if(row<0||row>=size||col<0||col>=size) return;
+
+  if(scoringMode && grid[row][col]){
+    // toggle group
+    const color=grid[row][col]; let visited=Array.from({length:size},()=>Array(size).fill(false)), stones=[];
+    function dfs(r0,c0){ if(r0<0||r0>=size||c0<0||c0>=size) return; if(visited[r0][c0]) return; if(grid[r0][c0]!==color) return; visited[r0][c0]=true; stones.push([r0,c0]); [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>dfs(r0+dx,c0+dy));}
+    dfs(row,col);
+    stones.sort((a,b)=>(a[0]-b[0])||(a[1]-b[1]));
+    const key=stones.map(([r,c])=>r+","+c).join(";");
+    if(userDeadGroups.has(key)) userDeadGroups.delete(key); else userDeadGroups.add(key);
+    drawBoard(); return;
+  }
+
+  const color=(moveList.length%2===0)?"B":"W"; if(!attemptMove(row,col,color)) return;
+  moveList.push({row,col,color}); currentMove=moveList.length; applyMoves();
+});
+
+// --- Apply Moves ---
+function applyMoves(){ grid=Array.from({length:size},()=>Array(size).fill(null)); koHistory.clear(); for(let i=0;i<currentMove;i++){const m=moveList[i]; attemptMove(m.row,m.col,m.color);} drawBoard();}
+
+// --- Auto Detect Dead Stones (only called once on scoring) ---
+function autoDetectDeadGroups(){
+  let visited=Array.from({length:size},()=>Array(size).fill(false));
+  for(let r=0;r<size;r++){ for(let c=0;c<size;c++){
+    if(grid[r][c] && !visited[r][c]){
+      const g=getGroupAndLiberties(r,c); g.stones.forEach(([x,y])=>visited[x][y]=true);
+      if(g.liberties<=1){
+        g.stones.sort((a,b)=>(a[0]-b[0])||(a[1]-b[1]));
+        const key=g.stones.map(([r,c])=>r+","+c).join(";");
+        userDeadGroups.add(key);
+      }
+    }
+  }}
+}
+
+// --- Compute Score ---
+function computeTerritory(){
+  let territory=Array.from({length:size},()=>Array(size).fill(null));
+  let visited=Array.from({length:size},()=>Array(size).fill(false));
+  let tempGrid = grid.map(r=>r.slice());
+  // remove dead stones
+  userDeadGroups.forEach(key=>{ const stones=key.split(";").map(s=>s.split(",").map(Number)); stones.forEach(([r,c])=>tempGrid[r][c]=null); });
+  for(let r=0;r<size;r++){for(let c=0;c<size;c++){
+    if(tempGrid[r][c]===null && !visited[r][c]){
+      let queue=[[r,c]]; visited[r][c]=true; let area=[[r,c]]; let borders=new Set();
+      while(queue.length){
+        const [x,y]=queue.shift();
+        [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+          const nx=x+dx, ny=y+dy;
+          if(nx<0||nx>=size||ny<0||ny>=size) return;
+          if(tempGrid[nx][ny]===null && !visited[nx][ny]){visited[nx][ny]=true; queue.push([nx,ny]); area.push([nx,ny]);}
+          else if(tempGrid[nx][ny]!==null) borders.add(tempGrid[nx][ny]);
+        });
+      }
+      if(borders.size===1){ const color=[...borders][0]; area.forEach(([x,y])=>territory[x][y]=color);}
+    }
+  }}
+  return territory;
+}
+
+function computeScoreChinese(){
+  let black=0, white=0;
+
+  // Copy grid and remove user-marked dead stones
+  let tempGrid = grid.map(r=>r.slice());
+  userDeadGroups.forEach(key=>{
+    const stones = key.split(";").map(s=>s.split(",").map(Number));
+    stones.forEach(([r,c])=>{
+      tempGrid[r][c] = null; // remove dead stones
+    });
+  });
+
+  // Count all alive stones
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(tempGrid[r][c]==='B') black++;
+      else if(tempGrid[r][c]==='W') white++;
+    }
+  }
+
+  // Compute territory (empty points surrounded by only one color)
+  const visited = Array.from({length:size},()=>Array(size).fill(false));
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(tempGrid[r][c]===null && !visited[r][c]){
+        let queue=[[r,c]]; visited[r][c]=true; let area=[[r,c]]; let borders=new Set();
+        while(queue.length){
+          const [x,y] = queue.shift();
+          [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy])=>{
+            const nx=x+dx, ny=y+dy;
+            if(nx<0||nx>=size||ny<0||ny>=size) return;
+            if(tempGrid[nx][ny]===null && !visited[nx][ny]){
+              visited[nx][ny]=true; queue.push([nx,ny]); area.push([nx,ny]);
+            } else if(tempGrid[nx][ny]!==null) borders.add(tempGrid[nx][ny]);
+          });
+        }
+        if(borders.size===1){
+          const color = [...borders][0];
+          area.forEach(([x,y])=>{
+            if(color==='B') black++;
+            else white++;
+          });
+        }
+      }
+    }
+  }
+
+  return {black, white};
+}
+
+// --- Draw scoring overlay ---
+function drawScoringOverlay(){
+  const territory = computeTerritory(); // after removing dead stones
+  const spacing = parseFloat(canvas.dataset.spacing);
+  const padding = parseFloat(canvas.dataset.padding);
+
+  // Territory overlay
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(territory[r][c]){
+        ctx.fillStyle = territory[r][c]==='B' ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)';
+        ctx.fillRect(padding + c*spacing - spacing/2, padding + r*spacing - spacing/2, spacing, spacing);
+      }
+    }
+  }
+
+  // Dead stones overlay
+  userDeadGroups.forEach(key=>{
+    const stones = key.split(";").map(s=>s.split(",").map(Number));
+    const color = grid[stones[0][0]][stones[0][1]] || 'B';
+    drawDeadMarkGroup({stones,color});
+  });
+}
+
+// --- Buttons ---
+function undoMove(){if(moveList.length>0){moveList.pop(); currentMove=moveList.length; applyMoves();}}
+function cleanBoard(){
+  moveList = [];
+  currentMove = 0;
+  grid = Array.from({length:size},()=>Array(size).fill(null));
+  koHistory.clear();
+  userDeadGroups.clear();
+  scoringMode = false;                     // reset scoring mode
+  document.getElementById("toggleMode").innerText = "📊 Score"; // reset button text
+  currentFileName = ""; // <-- reset file name
+  drawBoard();
+}
+function stepBackward(){if(currentMove>0){currentMove--; applyMoves();}}
+function stepForward(){if(currentMove<moveList.length){currentMove++; applyMoves();}}
+function goToBegin(){currentMove=0; applyMoves();}
+function goToEnd(){currentMove=moveList.length; applyMoves();}
+function toggleMode(){
+  scoringMode=!scoringMode;
+  document.getElementById("toggleMode").innerText=scoringMode?"✏️ Play":"📊 Score";
+  if(scoringMode) autoDetectDeadGroups();
+  drawBoard();
+}
+
+// --- SGF ---
+document.getElementById("sgfFile").addEventListener("change", function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Reset all memory
+  moveList = [];
+  currentMove = 0;
+  grid = Array.from({ length: size }, () => Array(size).fill(null));
+  koHistory.clear();
+  userDeadGroups.clear();
+  scoringMode = false;
+  document.getElementById("toggleMode").innerText = "📊 Score";
+
+  currentFileName = file.name; // store filename
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    parseSGF(ev.target.result);
+    currentMove = moveList.length;
+    drawBoard();
+  };
+  reader.readAsText(file);
+
+  // Reset the input so selecting the same file again triggers 'change'
+  e.target.value = null;
+});
+
+function parseSGF(sgf){moveList=[]; currentMove=0;
+  const regex=/;([BW])\[([a-s]{2})\]/g; let match;
+  while(match=regex.exec(sgf)){ const color=match[1]; const [c,r]=match[2].split("").map(ch=>ch.charCodeAt(0)-97); moveList.push({row:r,col:c,color});}
+  currentMove=moveList.length; applyMoves();
+}
+
+function saveSGF(){let sgf="(;FF[4]GM[1]SZ[19]";
+  moveList.forEach(m=>{ const c=String.fromCharCode(97+m.col); const r=String.fromCharCode(97+m.row); sgf+=`;${m.color}[${c}${r}]`;});
+  sgf+=")";
+  const blob=new Blob([sgf],{type:"text/plain"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="game.sgf"; a.click();
+  URL.revokeObjectURL(url);
+}
+
+window.addEventListener("resize",resizeBoard);
+resizeBoard();
+</script>
+
+</body>
+</html>
