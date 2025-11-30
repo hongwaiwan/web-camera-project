@@ -1,13 +1,14 @@
-/* ===== Base styles ===== */
+/* --- Reset & Body --- */
 body {
   margin: 0;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f0e4c2;
+  background: #f0e4c2;
   display: flex;
   flex-direction: column;
   height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* --- Board Container & Canvas --- */
 #board-container {
   flex: 1;
   display: flex;
@@ -16,57 +17,44 @@ body {
 }
 
 #board {
-  background-color: #deb887; /* wood-like board color */
-  touch-action: none;        /* allow mobile gestures */
+  background: #deb887;
+  touch-action: none;
 }
 
+/* --- Info Text --- */
 #info {
   text-align: center;
-  font-size: 18px;
+  font-size: 18px;  /* default desktop */
   margin: 5px;
+  font-weight: bold;
 }
 
+/* --- Controls / Buttons --- */
 #controls {
   padding: 10px;
   text-align: center;
-  background-color: #e0d2b2;
+  background: #e0d2b2;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 5px; /* small gap between buttons */
 }
 
-button {
-  cursor: pointer;
+#controls button {
+  margin: 5px;
   padding: 10px 16px;
-  font-size: 18px;
-  border: none;
-  border-radius: 6px;
-  background-color: #fff;
-  color: #000;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transition: transform 0.2s, background-color 0.2s;
+  font-size: 18px;  /* default desktop */
+  cursor: pointer;
 }
 
-button:hover {
-  transform: scale(1.05);
-  background-color: #f0f0f0;
-}
-
-/* ===== Responsive: Tablet / small desktop ===== */
-@media (max-width: 800px) {
-  button {
-    width: 22%;
-    font-size: 20px;
-    padding: 14px 0;
+/* --- Phone Portrait Mode Scaling --- */
+@media (max-width: 500px) and (orientation: portrait) {
+  #controls button {
+    font-size: 36px;      /* 2x desktop font size */
+    padding: 20px 30px;   /* 2x desktop padding */
+    width: 40%;            /* make buttons larger and wrap nicely */
   }
-}
 
-/* ===== Responsive: Phones in portrait ===== */
-@media (max-width: 500px) {
-  button {
-    width: 45%;
-    font-size: 24px;
-    padding: 16px 0;
+  #info {
+    font-size: 36px;      /* 2x desktop info text */
   }
 }
