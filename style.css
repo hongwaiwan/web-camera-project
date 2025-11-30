@@ -32,18 +32,17 @@ body {
 /* --- Controls / Buttons --- */
 #controls {
   padding: 10px;
-  text-align: center;
   background: #e0d2b2;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* 5 columns for first row alignment */
   gap: 5px;
 }
 
+/* All buttons */
 #controls button {
   margin: 0;
-  padding: 10px 16px;  
-  font-size: 18px;     
+  padding: 10px;
+  font-size: 18px;
   cursor: pointer;
   background-color: blue;
   color: white;
@@ -52,32 +51,36 @@ body {
   font-weight: bold;
 }
 
-/* --- Hover effect --- */
+/* Hover effect */
 #controls button:hover {
-  background-color: darkgreen;
+  background-color: darkblue;
   transform: scale(1.05);
 }
 
-/* --- Phone Portrait Mode --- */
+/* --- Multi-row Layout --- */
+/* Buttons after the 5th span 2 columns → 2 buttons per row */
+#controls button:nth-child(n+6) {
+  grid-column: span 2;
+}
+
+/* Center last button if odd number of buttons in last row */
+#controls button:last-child:nth-child(odd) {
+  justify-self: center;
+}
+
+/* --- Phone portrait mode --- */
 @media (max-width: 800px) and (orientation: portrait) {
   #controls {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);  /* first row 5 buttons */
-    grid-auto-rows: auto;
-    gap: 5px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
   }
 
   #controls button {
-    font-size: 36px;   /* double desktop font size */
+    font-size: 36px;   /* double font size */
     height: 80px;      /* double height */
   }
 
-  /* Second row buttons (last 3) span all 5 columns evenly */
-  #controls button:nth-child(n+6) {
-    grid-column: span 5;
-  }
-
   #info {
-    font-size: 36px; /* double text size */
+    font-size: 36px;  /* double info text */
   }
 }
