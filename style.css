@@ -29,7 +29,7 @@ body {
 }
 
 #info-line1 {
-  font-size: 36px; /* bigger for move and score */
+  font-size: 48px; /* bigger for move and score */
 }
 
 #info-line2 {
@@ -53,10 +53,10 @@ body {
 
 .row button {
   flex: 1;                /* Equal width per row */
-  padding: 20px;          /* Increase button height */
-  font-size: 36px;        /* Bigger text */
+  padding: 10px;          /* Increase button height */
+  font-size: 68px;        /* Bigger text */
   cursor: pointer;
-  background-color: mediumvioletred;  /* Button color */
+  background-color: blue;  /* Button color */
   color: white;
   border: none;
   border-radius: 8px;
@@ -77,7 +77,7 @@ body {
   }
 
   .row button {
-    font-size: 48px;  /* 2x bigger text */
+    font-size: 68px;  /* 2x bigger text */
     padding: 10px;    /* 2x taller buttons */
   }
 }
