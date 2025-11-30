@@ -63,13 +63,13 @@ body {
 }
 
 /* --- Phone Portrait Mode --- */
-@media (max-width: 800px) and (orientation: portrait) {
+@media (orientation: portrait) {
   #info {
-    font-size: 172px; /* 2x bigger than default for phone */
+    font-size: 72px; /* 2x bigger than default for phone */
   }
 
   .row button {
-    font-size: 172px;  /* 2x bigger text */
-    padding: 20px;    /* 2x taller buttons */
+    font-size: 72px;  /* 2x bigger text */
+    padding: 30px;    /* 2x taller buttons */
   }
 }
