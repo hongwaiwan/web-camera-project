@@ -1,3 +1,8 @@
+/* --- Prevent double-tap zoom but allow pinch-zoom --- */
+html, body {
+  touch-action: manipulation;
+}
+
 /* --- Reset & Body --- */
 body {
   margin: 0;
@@ -33,7 +38,7 @@ body {
 }
 
 #info-line2 {
-  font-size: 32px; /* smaller for filename */
+  font-size: 36px; /* smaller for filename */
   color: #333;     /* optional: slightly different color */
 }
 
@@ -56,13 +61,13 @@ body {
   padding: 10px;          /* Increase button height */
   font-size: 68px;        /* Bigger text */
   cursor: pointer;
-  background-color: lightslategray;  /* Button color */
+  background-color: rgb(109, 148, 190);  /* Button color */
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: bold;
   box-sizing: border-box;
-  transition: transform 0.1s, background-color 0.2s;
+  transition: transform 0.03s, background-color 0.06s;
 }
 
 .row button:hover {
@@ -70,14 +75,3 @@ body {
   transform: scale(1.05);
 }
 
-/* --- Phone Portrait Mode --- */
-@media (orientation: portrait) {
-  #info {
-    font-size: 48px; /* 2x bigger than default for phone */
-  }
-
-  .row button {
-    font-size: 68px;  /* 2x bigger text */
-    padding: 10px;    /* 2x taller buttons */
-  }
-}
